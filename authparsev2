@@ -1,0 +1,120 @@
+#!/usr/bin/python3
+import re
+import argparse
+
+# --- Begin argument parsing ---
+parser = argparse.ArgumentParser(description='Tool to analize ssh attempts '
+	'and show top offenders.')
+
+parser.add_argument('--log-file', '-l', default='/var/log/auth.log',
+	help='Authentication log file. Default is: /var/log/authlog')
+
+args = parser.parse_args()
+
+filename = args.log_file # argparse removes leading dashes and converts
+						 # internal dashes to underscores
+# --- End arguement parsing ---
+
+# This class will house informaion about each IP address attacking a system.
+# It will store the usernames attempted and how many times each was attempted.
+class Attacker:
+	def __init__(self, ip=None, username=None):
+		self.ip = ip
+		self.username = username
+		self.attempted_usernames = [username]
+		self.attempts_per_user = {username : 1}
+
+
+def createProfile(ip, username):
+	temp_object = Attacker(ip, username)
+	return temp_object
+
+def addToProfile(object, username):
+	if username not in object.attempted_usernames:
+		object.attempted_usernames.append(username)
+		object.attempts_per_user[username] = 1
+	else:
+		object.attempts_per_user[username] += 1
+
+def detailedSearch(ip):
+	temp_object = dict_attackers[ip]
+	print(f"IP address:\t{ip}")
+	print("The follwing Usernames were attempted: ")
+	print(temp_object.attempted_usernames)
+	print("Number of times earch were attempted: ")
+	for key in temp_object.attempts_per_user.keys():
+		print(str(temp_object.attempts_per_user[key]) + "\t" + key)
+
+
+def parse_line(line):
+	# Searches provided line for failed logins and returns the 
+	# username and password if a match is found. 
+	# Else it returns nothing.
+	
+	# search for invalid user attempts
+	search_pattern1 = 'Invalid\suser\s(\w+)\sfrom\s(\d+\.\d+\.\d+\.\d+)'
+	# search for failed login for valid username
+	search_pattern2 = 'Disconnected\sfrom\sauthenticating\suser\s(\w+)\s(\d+\.\d+\.\d+\.\d+)'
+	result1 = re.search(search_pattern1, line)
+	result2 = re.search(search_pattern2, line)
+	# assuming only one line parsed at a time so only one of the results
+	# will be valid.
+	if result1:
+		username = result1.group(1)
+		ip = result1.group(2)
+		return (username, ip)
+	elif result2:
+		username = result2.group(1)
+		ip = result2.group(2)
+		return (username, ip)
+	else:
+		# line did not contain a failed login and ip so will not return
+		# anything
+		pass
+
+#this function will create a new attacker instance and store it		
+
+
+dict_attackers = {}
+
+
+try:
+	with open(filename) as file_object:
+		for line in file_object:
+			result = parse_line(line)
+			if result:
+				atk_username = result[0]
+				atk_ip = result[1]
+				if atk_ip in dict_attackers.keys():
+					addToProfile(dict_attackers[atk_ip], atk_username)
+				else:
+					dict_attackers[atk_ip] = createProfile(atk_ip, atk_username)
+except FileNotFoundError as err:
+	print("The log file: " + args.log_file + " could not be found.")
+	print(err)
+	exit(2)
+except PermissionError as err:
+	print("You do not have permission to read this file, are you root?")
+	print(err)
+	exit(13)
+
+if not dict_attackers:
+	print(f"No failed logins found in {filename}")
+	exit(0)
+
+print("The follwing IP adresses have been found:\n")
+for key in dict_attackers.keys():
+	temp_object = dict_attackers[key]
+	temp_sum = sum(temp_object.attempts_per_user.values())
+	print(key + "\t\t" + str(temp_sum))
+
+
+while True:
+	detail_search = input("Type the IP address for detailed results, or 'q' to quit: ")
+	if detail_search:
+		if detail_search.lower() == 'q':
+			exit(0)
+		else:
+			detailedSearch(detail_search)
+	else:
+		continue
