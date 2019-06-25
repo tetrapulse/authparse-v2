@@ -24,7 +24,7 @@ class Attacker:
 		self.attempted_usernames = [username]
 		self.attempts_per_user = {username : 1}
 
-
+#this function will create a new attacker instance and store it	
 def createProfile(ip, username):
 	temp_object = Attacker(ip, username)
 	return temp_object
@@ -71,9 +71,6 @@ def parse_line(line):
 		# line did not contain a failed login and ip so will not return
 		# anything
 		pass
-
-#this function will create a new attacker instance and store it		
-
 
 dict_attackers = {}
 
