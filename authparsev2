@@ -41,7 +41,7 @@ def detailedSearch(ip):
 	print(f"IP address:\t{ip}")
 	print("The follwing Usernames were attempted: ")
 	print(temp_object.attempted_usernames)
-	print("Number of times earch were attempted: ")
+	print("Number of times each were attempted: ")
 	for key in temp_object.attempts_per_user.keys():
 		print(str(temp_object.attempts_per_user[key]) + "\t" + key)
 
@@ -112,6 +112,9 @@ while True:
 		if detail_search.lower() == 'q':
 			exit(0)
 		else:
-			detailedSearch(detail_search)
+                    try:
+                        detailedSearch(detail_search)
+                    except KeyError:
+                        print(f"The IP address {detail_search} was not found. Please try again or type 'q' to quit")
 	else:
 		continue
